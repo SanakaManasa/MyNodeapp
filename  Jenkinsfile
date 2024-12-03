@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = "my-node-app"
+        REGISTRY = "my-docker-repo"
+        NODE_VERSION = "14"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/username/MyNodeApp.git'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build(DOCKER_IMAGE)
+                }
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                script {
+                    docker.image(DOCKER_IMAGE).inside {
+                        sh 'npm install'
+                        sh 'npm test'  // Assuming you have tests configured in package.json
+                    }
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://$REGISTRY", 'docker-hub-credentials') {
+                        docker.image(DOCKER_IMAGE).push('latest')
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    // Add deployment commands here, e.g., for AWS, Kubernetes, or Docker Swarm
+                    echo 'Deploying to production'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()  // Clean up workspace
+        }
+    }
+}
